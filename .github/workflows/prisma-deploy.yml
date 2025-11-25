@@ -18,4 +18,9 @@ jobs:
       - name: Run Prisma Migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+          POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ] ; then
+            export DATABASE_URL="$POSTGRES_PRISMA_URL"
+          fi
+          npx prisma migrate deploy --schema=prisma/schema.prisma

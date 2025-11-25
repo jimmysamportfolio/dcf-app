@@ -11,14 +11,21 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Allow passing DATABASE_URL at build time so Prisma generation and any build-time
-# steps that need the DB url can run. Use --build-arg DATABASE_URL="..." when building.
+# Allow passing DATABASE_URL or POSTGRES_PRISMA_URL at build time.
 ARG DATABASE_URL
+ARG POSTGRES_PRISMA_URL
 ENV DATABASE_URL=${DATABASE_URL}
+ENV POSTGRES_PRISMA_URL=${POSTGRES_PRISMA_URL}
 
-# Ensure Prisma client is generated before building so imports succeed during build
-RUN npx prisma generate || true
-RUN npm run build
+# Ensure Prisma client is generated before building. If DATABASE_URL is not set,
+# fall back to POSTGRES_PRISMA_URL for the build step. Use a shell so the fallback
+# value is available to both prisma generate and next build.
+RUN sh -c '\
+	export DATABASE_URL=${DATABASE_URL:-$POSTGRES_PRISMA_URL}; \
+	echo "Using DATABASE_URL=${DATABASE_URL:0:10}..."; \
+	npx prisma generate || true; \
+	npm run build\
+'
 
 # Stage 3: Production image
 FROM node:20-alpine AS runner
