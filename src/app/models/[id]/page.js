@@ -129,11 +129,24 @@ export default function ModelDetailPage() {
     ? model.projectedFreeCashFlows
     : JSON.parse(model.projectedFreeCashFlows || "[]");
 
+  // Ensure projection rate arrays are parsed and defaulted
+  const parseArr = (v) => Array.isArray(v) ? v : JSON.parse(v || '[]');
+  const taxRates = parseArr(model.taxRates);
+  const daRates = parseArr(model.daRates);
+  const capexRates = parseArr(model.capexRates);
+  const nwcRates = parseArr(model.nwcRates);
+
   const years = [2025, 2026, 2027, 2028, 2029];
   const wacc = model.wacc || 0;
   const discountFactors = years.map((_, i) => 1 / Math.pow(1 + wacc, i + 1));
   const pvValues = projectedFreeCashFlows.map((fcf, i) => fcf * discountFactors[i]);
   const sumOfPV = pvValues.reduce((sum, pv) => sum + pv, 0);
+
+  // Calculate intermediate rows for display (tax, da, capex, nwc)
+  const taxExpenses = projectedEBIT.map((ebit, i) => ebit * (taxRates[i] || 0));
+  const daValues = projectedRevenues.map((rev, i) => rev * (daRates[i] || 0));
+  const capexValues = projectedRevenues.map((rev, i) => rev * (capexRates[i] || 0));
+  const nwcValues = projectedRevenues.map((rev, i) => rev * (nwcRates[i] || 0));
 
   return (
     <main className="p-6 min-h-screen">
@@ -207,6 +220,30 @@ export default function ModelDetailPage() {
                       <th className="font-normal">EBIT</th>
                       {projectedEBIT.map((value, i) => (
                         <td key={i}>{formatNumber(value)}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th className="font-normal">Less: Tax Expense</th>
+                      {taxExpenses.map((value, i) => (
+                        <td key={i} className="text-red-600">({formatNumber(value)})</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th className="font-normal">Add: Depreciation & Amortization</th>
+                      {daValues.map((value, i) => (
+                        <td key={i}>{formatNumber(value)}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th className="font-normal">Less: Capital Expenditures</th>
+                      {capexValues.map((value, i) => (
+                        <td key={i} className="text-red-600">({formatNumber(value)})</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th className="font-normal">Less: Changes in NWC</th>
+                      {nwcValues.map((value, i) => (
+                        <td key={i} className="text-red-600">({formatNumber(value)})</td>
                       ))}
                     </tr>
                     <tr className="font-bold">
