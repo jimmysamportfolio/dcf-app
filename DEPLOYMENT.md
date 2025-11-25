@@ -40,3 +40,27 @@ Notes & tips
 - If you want static export, consider `next export` and serving via a static server.
 - For serverless functions, Vercel's standard platform is often simpler than custom Docker.
 - If you run into build issues on Vercel, inspect build logs and ensure all build deps are included in `package.json`.
+
+Provisioning Vercel Postgres and wiring Prisma
+
+1) Provision Vercel Postgres
+- Go to https://vercel.com and open your project dashboard.
+- In the left sidebar, go to "Integrations" -> "Vercel Postgres" (or visit the Marketplace and add Vercel Postgres).
+- Create a new Postgres database (pick a plan). After creation, Vercel will provide a connection string.
+
+2) Set DATABASE_URL in Vercel
+- In your Project -> Settings -> Environment Variables, add a variable named `DATABASE_URL` and paste the connection string.
+- Add it for both "Build" and "Production" (and Preview if desired).
+
+3) Add DATABASE_URL to GitHub secrets (for migrations in CI)
+- In your GitHub repo, go to Settings -> Secrets and variables -> Actions -> New repository secret.
+- Name it `DATABASE_URL` and set the value to the same connection string.
+
+4) Apply Prisma migrations
+- Using the workflow `.github/workflows/prisma-deploy.yml` created in this repo, when you push to `main` (or `master`), GitHub Actions will run `npx prisma migrate deploy` against the DATABASE_URL from secrets and apply migrations.
+
+5) Notes
+- For development you can connect your local app to Vercel Postgres by setting your local `.env` DATABASE_URL (but avoid using production credentials locally).
+- For quick schema syncing in development you can run `npx prisma db push` (not recommended for production schema evolution).
+
+Security reminder: never commit credentials or the .env file to the repository. Use Vercel environment variables and GitHub secrets.
